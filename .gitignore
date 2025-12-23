@@ -1,0 +1,7 @@
+
+# Terraform (local-only; never commit)
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/tfplan
