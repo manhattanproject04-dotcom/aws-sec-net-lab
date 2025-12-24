@@ -16,3 +16,22 @@
 **Notes**
 - Region: `us-east-2`
 - Next: proceed to next project step (add here once you confirm).
+## 2025-12-23 — Project 1 / Step 2 (Network Baseline) + Repo hygiene + Next: Remote State
+
+### Completed
+- Terraform apply (envs/dev): **Resources: 6 added, 0 changed, 0 destroyed**
+- Outputs captured: `vpc_id`, `private_subnet_ids`, `private_route_table_id`
+- IAM user used: `terraform-lab`
+  - Policy attached: `AmazonVPCFullAccess`
+  - Access key active; AWS CLI profile: `lab`
+- Git initialized + commits created:
+  - `docs: log Project 1 Step 2 apply outputs`
+  - `feat: network baseline module + dev env wiring`
+- Repo hygiene confirmed:
+  - Tracked: `envs/dev/.terraform.lock.hcl`
+  - Ignored (confirmed via `git status --ignored`): `envs/dev/.terraform/`, `envs/dev/terraform.tfstate`, `envs/dev/terraform.tfvars`, `envs/dev/tfplan`
+  - `git status`: working tree clean
+
+### Next up
+- Move Terraform state to **remote backend**: S3 (state) + DynamoDB (state locking) for `envs/dev`
+
