@@ -35,3 +35,19 @@
 ### Next up
 - Move Terraform state to **remote backend**: S3 (state) + DynamoDB (state locking) for `envs/dev`
 
+## 2025-12-24 — Project 1 / Step 2 — Remote State Backend (S3 + DynamoDB) Enabled
+
+**Backend configuration**
+- Backend: S3
+- Region: us-east-2
+- State bucket: seven-aws-sec-net-lab-tfstate-62780dda
+- State key: envs/dev/terraform.tfstate
+- DynamoDB lock table: seven-aws-sec-net-lab-tflock
+
+**State migration + validation**
+- Confirmed remote state object exists: `aws s3 ls s3://seven-aws-sec-net-lab-tfstate-62780dda/envs/dev/` → `terraform.tfstate`
+- Verified convergence: `terraform plan` → **No changes. Infrastructure matches the configuration.**
+- Repo status after changes: `git status` → working tree clean
+
+**Notes**
+- Local state artifacts remain ignored by git (`terraform.tfstate`, `.terraform/`, `tfplan`, `terraform.tfvars`, `terraform.tfstate.backup`).
