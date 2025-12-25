@@ -51,3 +51,10 @@
 
 **Notes**
 - Local state artifacts remain ignored by git (`terraform.tfstate`, `.terraform/`, `tfplan`, `terraform.tfvars`, `terraform.tfstate.backup`).
+
+## 2025-12-24 — Project 1 / Step 2 Completed (Public + Private across 2 AZs)
+
+- Added public layer: 2 public subnets, Internet Gateway, public route table, and default route (0.0.0.0/0 → IGW); no NAT (cost-safe).
+- Terraform apply (envs/dev): **Resources: 7 added, 0 changed, 0 destroyed.**
+- Outputs confirmed: `vpc_id`, `public_subnet_ids`, `private_subnet_ids`, `public_route_table_id`, `private_route_table_id`, `internet_gateway_id`.
+- Git commit: `feat: add public subnets + IGW + public routing (complete Step 2)`
