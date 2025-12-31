@@ -140,3 +140,25 @@ Add security visibility (VPC Flow Logs) and private AWS service access (VPC Endp
 
 ### Next step
 Step 4: Launch a private EC2 instance with **SSM Session Manager** access (no SSH, no public IP, no NAT) to validate endpoint path end-to-end.
+
+## 2025-12-31 — Project 1 / Step 4: Private EC2 + SSM Session Manager (No SSH, No Public IP)
+
+### Objective
+Deploy private compute and prove management access via SSM Session Manager only (no SSH, no NAT).
+
+### Changes implemented
+- Added module `modules/private_ec2_ssm`:
+  - Amazon Linux 2023 EC2 instance in private subnet (no public IP)
+  - IMDSv2 enforced
+  - Encrypted root volume
+  - Dedicated security group with no ingress and limited egress (HTTPS + DNS)
+  - IAM role + instance profile with `AmazonSSMManagedInstanceCore`
+
+### Verification
+- Terraform apply succeeded; outputs confirmed:
+  - `private_ec2_instance_id`: i-0c2fb1cb0285f6a81
+  - `private_ec2_private_ip`: 10.10.0.190
+- Instance registered in SSM and reachable:
+  - `aws ssm describe-instance-information` returned `PingStatus: Online`
+- Next verification: establish interactive session via:
+  - `aws ssm start-session --target <instance-id>`
