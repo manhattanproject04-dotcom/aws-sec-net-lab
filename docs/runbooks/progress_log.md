@@ -58,3 +58,37 @@
 - Terraform apply (envs/dev): **Resources: 7 added, 0 changed, 0 destroyed.**
 - Outputs confirmed: `vpc_id`, `public_subnet_ids`, `private_subnet_ids`, `public_route_table_id`, `private_route_table_id`, `internet_gateway_id`.
 - Git commit: `feat: add public subnets + IGW + public routing (complete Step 2)`
+
+## 2025-12-25 — Step 2 Stabilized + Remote State Migration Completed (S3 Lockfile)
+
+### What changed
+- Resolved Security Group description validation issue (AWS SG description now conforms to allowed character set).
+- Finalized `security_groups` module and wired it into `envs/dev` with closed-by-default ingress CIDRs.
+- Migrated Terraform state from local to remote backend in S3 and enabled native state locking via S3 lockfile.
+
+### Remote backend (dev)
+- Backend: **S3**
+- Bucket: `seven-aws-sec-net-lab-tfstate-62780dda`
+- Key: `envs/dev/terraform.tfstate`
+- Region: `us-east-2`
+- Locking: `use_lockfile = true`
+- Verification:
+  - `terraform init -reconfigure` → backend configured successfully
+  - `aws s3api list-objects-v2 --bucket seven-aws-sec-net-lab-tfstate-62780dda --prefix envs/dev/` → state object present
+  - `terraform plan` → **No changes** (infra matches configuration)
+
+### Infrastructure status (dev)
+- VPC: `vpc-00c6c8339be4122d6`
+- Public subnets: `subnet-0654ee0e27fb0d2b6`, `subnet-07ec489fff3f61096`
+- Private subnets: `subnet-0632bd33bed11e87b`, `subnet-0908be87aea5e5bea`
+- Internet Gateway: `igw-0e134663584f30c20`
+- Route tables:
+  - Public: `rtb-056c95a653aee60e4`
+  - Private: `rtb-0d3a6cd70ea70c23c`
+- Security Groups:
+  - Admin: `sg-0470b76b7870064fe`
+  - App: `sg-0c6244ffa0f5bb775`
+  - Data: `sg-018cdce462ceb6cce`
+
+### Git status
+- Working tree clean after commit(s); repository is reproducible with remote state enabled.
