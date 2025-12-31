@@ -162,3 +162,25 @@ Deploy private compute and prove management access via SSM Session Manager only 
   - `aws ssm describe-instance-information` returned `PingStatus: Online`
 - Next verification: establish interactive session via:
   - `aws ssm start-session --target <instance-id>`
+
+## 2025-12-31 — Project 1 / Step 4: Private EC2 + SSM Session Manager (No SSH, No Public IP)
+
+### Objective
+Deploy private compute and validate secure management via SSM Session Manager only (no inbound ports, no public IP, no NAT).
+
+### Changes implemented
+- Added module `modules/private_ec2_ssm`:
+  - Amazon Linux 2023 EC2 in a private subnet (no public IP)
+  - IMDSv2 enforced
+  - Encrypted root volume
+  - Dedicated SG: no ingress; limited egress (HTTPS + DNS)
+  - IAM role + instance profile using `AmazonSSMManagedInstanceCore`
+
+### Verification
+- Terraform apply succeeded; outputs confirmed:
+  - Instance: `i-0c2fb1cb0285f6a81`
+  - Private IP: `10.10.0.190`
+- SSM registration confirmed:
+  - `aws ssm describe-instance-information` → `PingStatus: Online`
+- Session Manager validation:
+  - `aws ssm start-session --target i-0c2fb1cb0285f6a81` (interactive shell, no SSH)
