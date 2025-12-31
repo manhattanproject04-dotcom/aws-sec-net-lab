@@ -59,3 +59,18 @@ output "ssm_endpoint_ids" {
   value       = module.vpc_endpoints.ssm_endpoint_ids
   description = "SSM-related interface endpoint IDs."
 }
+
+output "private_ec2_instance_id" {
+  value       = module.private_ec2_ssm.instance_id
+  description = "Private EC2 instance ID managed via SSM."
+}
+
+output "private_ec2_private_ip" {
+  value       = module.private_ec2_ssm.private_ip
+  description = "Private EC2 instance private IP."
+}
+
+output "private_ec2_sg_id" {
+  value       = module.private_ec2_ssm.instance_security_group_id
+  description = "Security group ID for the private EC2 instance."
+}

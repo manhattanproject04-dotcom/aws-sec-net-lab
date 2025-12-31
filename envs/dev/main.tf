@@ -42,3 +42,13 @@ module "vpc_endpoints" {
 
   enable_ssm_endpoints = true
 }
+
+module "private_ec2_ssm" {
+  source = "../../modules/private_ec2_ssm"
+
+  name_prefix       = var.name_prefix
+  region            = var.region
+  vpc_id            = module.network_baseline.vpc_id
+  private_subnet_id = module.network_baseline.private_subnet_ids[0]
+  tags              = var.tags
+}

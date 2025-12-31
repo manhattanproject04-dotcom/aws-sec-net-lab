@@ -92,3 +92,51 @@
 
 ### Git status
 - Working tree clean after commit(s); repository is reproducible with remote state enabled.
+
+## 2025-12-31 — Project 1 / Step 3: Flow Logs + VPC Endpoints (Cost-Safe, No NAT)
+
+### Objective
+Add security visibility (VPC Flow Logs) and private AWS service access (VPC Endpoints) while keeping costs low (no NAT Gateway).
+
+### Changes implemented
+- **VPC Flow Logs → S3**
+  - Created module: `modules/flow_logs_s3`
+  - Provisioned a dedicated S3 bucket for flow logs with:
+    - Block Public Access enabled
+    - SSE-S3 (AES256) encryption
+    - Lifecycle expiration (retention) to control storage cost
+  - Enabled VPC Flow Logs on the dev VPC with `traffic_type = ALL` and per-hour partitioning.
+
+- **VPC Endpoints**
+  - Created module: `modules/vpc_endpoints`
+  - Added **S3 Gateway Endpoint** associated with the **private route table** (S3 access without internet/NAT).
+  - Added **SSM Interface Endpoints** in private subnets with Private DNS enabled:
+    - `ssm`
+    - `ec2messages`
+    - `ssmmessages`
+  - Created an endpoint security group allowing HTTPS (443) from within the VPC CIDR.
+
+### IAM adjustment (required)
+- Updated IAM user `terraform-lab` permissions to allow Flow Logs delivery setup:
+  - Added inline policy `terraform-lab-logs-delivery` with `logs:CreateLogDelivery` and related `logs:*LogDelivery` / resource policy read/write actions.
+  - Note: This was applied via an admin-capable IAM identity (not the `lab` profile).
+
+### Verification
+- `terraform init -reconfigure` completed successfully (S3 backend + lockfile).
+- `terraform plan` → **No changes** after apply.
+- Verified resources via CLI:
+  - `aws ec2 describe-flow-logs --filter Name=resource-id,Values=<vpc_id>`
+  - `aws ec2 describe-vpc-endpoints --filters Name=vpc-id,Values=<vpc_id>`
+- Confirmed S3 state remains in:
+  - Bucket: `seven-aws-sec-net-lab-tfstate-62780dda`
+  - Key: `envs/dev/terraform.tfstate`
+
+### Outputs captured (envs/dev)
+- `flow_logs_bucket_name`
+- `flow_log_id`
+- `s3_gateway_endpoint_id`
+- `ssm_endpoint_ids`
+- `vpce_security_group_id`
+
+### Next step
+Step 4: Launch a private EC2 instance with **SSM Session Manager** access (no SSH, no public IP, no NAT) to validate endpoint path end-to-end.
