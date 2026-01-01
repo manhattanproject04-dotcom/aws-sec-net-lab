@@ -58,3 +58,129 @@
 - Terraform apply (envs/dev): **Resources: 7 added, 0 changed, 0 destroyed.**
 - Outputs confirmed: `vpc_id`, `public_subnet_ids`, `private_subnet_ids`, `public_route_table_id`, `private_route_table_id`, `internet_gateway_id`.
 - Git commit: `feat: add public subnets + IGW + public routing (complete Step 2)`
+
+## 2025-12-25 — Step 2 Stabilized + Remote State Migration Completed (S3 Lockfile)
+
+### What changed
+- Resolved Security Group description validation issue (AWS SG description now conforms to allowed character set).
+- Finalized `security_groups` module and wired it into `envs/dev` with closed-by-default ingress CIDRs.
+- Migrated Terraform state from local to remote backend in S3 and enabled native state locking via S3 lockfile.
+
+### Remote backend (dev)
+- Backend: **S3**
+- Bucket: `seven-aws-sec-net-lab-tfstate-62780dda`
+- Key: `envs/dev/terraform.tfstate`
+- Region: `us-east-2`
+- Locking: `use_lockfile = true`
+- Verification:
+  - `terraform init -reconfigure` → backend configured successfully
+  - `aws s3api list-objects-v2 --bucket seven-aws-sec-net-lab-tfstate-62780dda --prefix envs/dev/` → state object present
+  - `terraform plan` → **No changes** (infra matches configuration)
+
+### Infrastructure status (dev)
+- VPC: `vpc-00c6c8339be4122d6`
+- Public subnets: `subnet-0654ee0e27fb0d2b6`, `subnet-07ec489fff3f61096`
+- Private subnets: `subnet-0632bd33bed11e87b`, `subnet-0908be87aea5e5bea`
+- Internet Gateway: `igw-0e134663584f30c20`
+- Route tables:
+  - Public: `rtb-056c95a653aee60e4`
+  - Private: `rtb-0d3a6cd70ea70c23c`
+- Security Groups:
+  - Admin: `sg-0470b76b7870064fe`
+  - App: `sg-0c6244ffa0f5bb775`
+  - Data: `sg-018cdce462ceb6cce`
+
+### Git status
+- Working tree clean after commit(s); repository is reproducible with remote state enabled.
+
+## 2025-12-31 — Project 1 / Step 3: Flow Logs + VPC Endpoints (Cost-Safe, No NAT)
+
+### Objective
+Add security visibility (VPC Flow Logs) and private AWS service access (VPC Endpoints) while keeping costs low (no NAT Gateway).
+
+### Changes implemented
+- **VPC Flow Logs → S3**
+  - Created module: `modules/flow_logs_s3`
+  - Provisioned a dedicated S3 bucket for flow logs with:
+    - Block Public Access enabled
+    - SSE-S3 (AES256) encryption
+    - Lifecycle expiration (retention) to control storage cost
+  - Enabled VPC Flow Logs on the dev VPC with `traffic_type = ALL` and per-hour partitioning.
+
+- **VPC Endpoints**
+  - Created module: `modules/vpc_endpoints`
+  - Added **S3 Gateway Endpoint** associated with the **private route table** (S3 access without internet/NAT).
+  - Added **SSM Interface Endpoints** in private subnets with Private DNS enabled:
+    - `ssm`
+    - `ec2messages`
+    - `ssmmessages`
+  - Created an endpoint security group allowing HTTPS (443) from within the VPC CIDR.
+
+### IAM adjustment (required)
+- Updated IAM user `terraform-lab` permissions to allow Flow Logs delivery setup:
+  - Added inline policy `terraform-lab-logs-delivery` with `logs:CreateLogDelivery` and related `logs:*LogDelivery` / resource policy read/write actions.
+  - Note: This was applied via an admin-capable IAM identity (not the `lab` profile).
+
+### Verification
+- `terraform init -reconfigure` completed successfully (S3 backend + lockfile).
+- `terraform plan` → **No changes** after apply.
+- Verified resources via CLI:
+  - `aws ec2 describe-flow-logs --filter Name=resource-id,Values=<vpc_id>`
+  - `aws ec2 describe-vpc-endpoints --filters Name=vpc-id,Values=<vpc_id>`
+- Confirmed S3 state remains in:
+  - Bucket: `seven-aws-sec-net-lab-tfstate-62780dda`
+  - Key: `envs/dev/terraform.tfstate`
+
+### Outputs captured (envs/dev)
+- `flow_logs_bucket_name`
+- `flow_log_id`
+- `s3_gateway_endpoint_id`
+- `ssm_endpoint_ids`
+- `vpce_security_group_id`
+
+### Next step
+Step 4: Launch a private EC2 instance with **SSM Session Manager** access (no SSH, no public IP, no NAT) to validate endpoint path end-to-end.
+
+## 2025-12-31 — Project 1 / Step 4: Private EC2 + SSM Session Manager (No SSH, No Public IP)
+
+### Objective
+Deploy private compute and prove management access via SSM Session Manager only (no SSH, no NAT).
+
+### Changes implemented
+- Added module `modules/private_ec2_ssm`:
+  - Amazon Linux 2023 EC2 instance in private subnet (no public IP)
+  - IMDSv2 enforced
+  - Encrypted root volume
+  - Dedicated security group with no ingress and limited egress (HTTPS + DNS)
+  - IAM role + instance profile with `AmazonSSMManagedInstanceCore`
+
+### Verification
+- Terraform apply succeeded; outputs confirmed:
+  - `private_ec2_instance_id`: i-0c2fb1cb0285f6a81
+  - `private_ec2_private_ip`: 10.10.0.190
+- Instance registered in SSM and reachable:
+  - `aws ssm describe-instance-information` returned `PingStatus: Online`
+- Next verification: establish interactive session via:
+  - `aws ssm start-session --target <instance-id>`
+
+## 2025-12-31 — Project 1 / Step 4: Private EC2 + SSM Session Manager (No SSH, No Public IP)
+
+### Objective
+Deploy private compute and validate secure management via SSM Session Manager only (no inbound ports, no public IP, no NAT).
+
+### Changes implemented
+- Added module `modules/private_ec2_ssm`:
+  - Amazon Linux 2023 EC2 in a private subnet (no public IP)
+  - IMDSv2 enforced
+  - Encrypted root volume
+  - Dedicated SG: no ingress; limited egress (HTTPS + DNS)
+  - IAM role + instance profile using `AmazonSSMManagedInstanceCore`
+
+### Verification
+- Terraform apply succeeded; outputs confirmed:
+  - Instance: `i-0c2fb1cb0285f6a81`
+  - Private IP: `10.10.0.190`
+- SSM registration confirmed:
+  - `aws ssm describe-instance-information` → `PingStatus: Online`
+- Session Manager validation:
+  - `aws ssm start-session --target i-0c2fb1cb0285f6a81` (interactive shell, no SSH)

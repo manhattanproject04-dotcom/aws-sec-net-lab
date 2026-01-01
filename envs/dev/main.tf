@@ -18,3 +18,37 @@ module "security_groups" {
   admin_ingress_cidrs = []
   app_ingress_cidrs   = []
 }
+
+module "flow_logs_s3" {
+  source = "../../modules/flow_logs_s3"
+
+  name_prefix        = var.name_prefix
+  vpc_id             = module.network_baseline.vpc_id
+  region             = "us-east-2"
+  log_retention_days = 14
+  tags               = var.tags
+}
+
+module "vpc_endpoints" {
+  source = "../../modules/vpc_endpoints"
+
+  name_prefix            = var.name_prefix
+  region                 = var.region
+  vpc_id                 = module.network_baseline.vpc_id
+  vpc_cidr               = module.network_baseline.vpc_cidr
+  private_subnet_ids     = module.network_baseline.private_subnet_ids
+  private_route_table_id = module.network_baseline.private_route_table_id
+  tags                   = var.tags
+
+  enable_ssm_endpoints = true
+}
+
+module "private_ec2_ssm" {
+  source = "../../modules/private_ec2_ssm"
+
+  name_prefix       = var.name_prefix
+  region            = var.region
+  vpc_id            = module.network_baseline.vpc_id
+  private_subnet_id = module.network_baseline.private_subnet_ids[0]
+  tags              = var.tags
+}
